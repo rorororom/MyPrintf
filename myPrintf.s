@@ -129,7 +129,7 @@ InputType:
     ; загрузить адрес таблицы в регистр rdx.
     lea rdx, [JmpTable]                 ; ъ
     imul rax, rax, 8                    ;  |
-                                        ;  |  ---> rdx = [JmpTable + 8 * (symbol - 'b')]
+                                        ;  |  ---> rdx = [JmpTable + 8 * (rax - 'b')]
     add rdx, rax                        ;  |
     jmp [rdx]                           ; /
 
@@ -207,7 +207,7 @@ itoa:
     mov r9, 10           ; Сохраняем основание системы счисления
     cmp rax, 0
     jne check_negative  ; Если число не ноль, проверяем на отрицательность
-    mov byte [rbx], '0' ; Если число ноль, записываем символ '0' в буфер
+    mov byte [rbx + r8], '0' ; Если число ноль, записываем символ '0' в буфер
     inc r8              ; Увеличиваем счетчик
     jmp AfterItoaLoop   ; Завершаем функцию
 
@@ -246,7 +246,7 @@ AfterItoaLoop:
     add r9, 8
     inc rdi
     jmp PrintFLoop  ; Завершаем цикл
-    
+
 ; ====================================================================================================
 ; Как происходит деление:
 ;       DIV R9 ----> RDX:RAX \ r9
@@ -468,8 +468,10 @@ HandleNumberCondition:
 
     cmp rax, 0                          ; проверяем, не равно ли число нулю
     jnz NotZero                         ; если число не равно нулю, прыгаем
-    mov byte [rbx], al                  ; записываем символ в буфер
-    inc rcx
+    mov byte [rbx + r8], '0'                  ; записываем символ в буфер
+    inc r8
+    push qword [rel ret_a2]
+    ret
 
 NotZero:
     call ConvertNumber                  ; преобразуем число в правильную систему овнования
@@ -485,11 +487,11 @@ JmpTable:
     dq TypeBinary
     dq TypeChar
     dq TypeInt
-    times 10 dq 'd'                        ; times -> используется для повторения определенного блока кода
+    times 'o' - 'd' - 1 dq 'd'                        ; times -> используется для повторения определенного блока кода
     dq TypeOct
-    times 3 dq 'e'
+    times 's' - 'o' - 1 dq 'e'
     dq TypeString
-    times 4 dq 'd'
+    times 'x' - 's' - 1 dq 'd'
     dq TypeHex
 
 ; ====================================================================================================
