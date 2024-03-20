@@ -129,7 +129,7 @@ InputType:
     ; загрузить адрес таблицы в регистр rdx.
     lea rdx, [JmpTable]                 ; ъ
     imul rax, rax, 8                    ;  |
-                                        ;  |  ---> rdx = [JmpTable + 8 * (rax - 'b')]
+                                        ;  |  ---> rdx = [JmpTable + 8 * (symbol - 'b')]
     add rdx, rax                        ;  |
     jmp [rdx]                           ; /
 
@@ -399,8 +399,10 @@ TypeChar:
 ;-----------------------------------------------------------------------------------------------------
 ConvertToBuffer:
     pop rbp
+    dec r12
     BuffLoop:
-        pop rdx                             ; извлекаем сохраненные остатки из стека
+        lea r13, [remainders_number]
+        movzx rdx, byte [r13 + r12]         ; берем остаток
         mov [rel save_rsi], rsi
         movzx rax, dl                       ; помещаем остаток в rax
         mov rsi, alphabet                   ; rsi = адрес строки alphabet
@@ -410,6 +412,7 @@ ConvertToBuffer:
         mov byte [rbx + r8], al             ; копируем символ в буфер
         inc r8
         dec rcx
+        dec r12
         jnz BuffLoop                        ; повторяем, пока не завершим все разряды
     push rbp
     mov rsi, qword [rel save_rsi]
@@ -433,6 +436,7 @@ ConvertNumber:
     mov [rel ret_a], rbp                ; сохраняем адрес возврата
 
     xor rbp, rbp
+    xor r12, r12
 
 convert_loop:
     test rax, rax                       ; проверяем, не закончилось ли число
@@ -441,8 +445,10 @@ convert_loop:
     inc rbp                             ; увеличиваем счетчик разрядов
     mov rdx, rax                        ; сохраняем число в rdx для деления
     and rdx, rdi                        ; получаем остаток от деления на основание системы счисления
-    push rdx                            ; сохраняем остаток на стеке
+    lea r13, [remainders_number]
+    mov byte [r13 + r12], dl            ; сохраняем остаток в массив
     sar rax, cl                         ; делим число на основание системы счисления (сдвиг вправо на cl бит)
+    inc r12
 
     jmp convert_loop
 
@@ -487,11 +493,11 @@ JmpTable:
     dq TypeBinary
     dq TypeChar
     dq TypeInt
-    times 'o' - 'd' - 1 dq 'd'                        ; times -> используется для повторения определенного блока кода
+    times 10 dq 'd'                        ; times -> используется для повторения определенного блока кода
     dq TypeOct
-    times 's' - 'o' - 1 dq 'e'
+    times 3 dq 'e'
     dq TypeString
-    times 'x' - 's' - 1 dq 'd'
+    times 4 dq 'd'
     dq TypeHex
 
 ; ====================================================================================================
@@ -506,3 +512,4 @@ section .data
     buffer times 512 db 0
     msg_len equ $ - buffer
     alphabet db "0123456789ABCDEF"
+    remainders_number db 0
